@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: web-management
+  datasource:
+    url: jdbc:mysql://localhost:3306/web_study
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+
+mybatis:
+  type-aliases-package: com.wanna.webmanagement.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
