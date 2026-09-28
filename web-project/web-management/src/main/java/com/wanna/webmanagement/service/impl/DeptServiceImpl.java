@@ -1,5 +1,6 @@
 package com.wanna.webmanagement.service.impl;
 
+import com.wanna.webmanagement.exception.BusinessException;
 import com.wanna.webmanagement.mapper.DeptMapper;
 import com.wanna.webmanagement.pojo.Dept;
 import com.wanna.webmanagement.service.DeptService;
@@ -22,7 +23,10 @@ public class DeptServiceImpl implements DeptService {
 
     @Override
     public void deleteById(Integer deptId){
-        deptMapper.deleteById(deptId);
+        int rows=deptMapper.deleteById(deptId);
+        if(rows==0){
+            throw new BusinessException("要删除的部门不存在，id = " + deptId);
+        }
     }
 
     @Override
@@ -34,12 +38,18 @@ public class DeptServiceImpl implements DeptService {
 
     @Override
     public Dept getById(Integer deptId){
-        return deptMapper.getById(deptId);
+        Dept dept=deptMapper.getById(deptId);
+        if(dept==null){
+            throw new BusinessException("部门不存在，id = " + deptId);
+        }
+        return dept;
     }
 
     @Override
     public void update(Dept dept){
         dept.setUpdateTime(LocalDateTime.now());
-        deptMapper.update(dept);
+        if(deptMapper.update(dept)==0){
+            throw new BusinessException("要修改的部门不存在，id = " + dept.getId());
+        }
     }
 }

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- 日志文件存储路径 -->
+    <property name="LOG_PATH" value="./logs"/>
+    <property name="APP_NAME" value="web-management"/>
+
+    <!-- 控制台日志输出 -->
+    <appender name="CONSOLE"
+              class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 日志文件输出 -->
+    <appender name="FILE"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+        <file>${LOG_PATH}/${APP_NAME}.log</file>
+
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+
+        <!-- 按日期和文件大小滚动 -->
+        <rollingPolicy
+                class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+
+            <fileNamePattern>
+                ${LOG_PATH}/archive/${APP_NAME}.%d{yyyy-MM-dd}.%i.log
+            </fileNamePattern>
+
+            <!-- 单个日志文件最大 10MB -->
+            <maxFileSize>10MB</maxFileSize>
+
+            <!-- 日志保留 30 天 -->
+            <maxHistory>30</maxHistory>
+
+            <!-- 所有归档日志最大占用 1GB -->
+            <totalSizeCap>1GB</totalSizeCap>
+
+        </rollingPolicy>
+    </appender>
+
+    <!-- Spring Boot 日志级别 -->
+    <logger name="org.springframework" level="INFO"/>
+
+    <!-- MyBatis SQL 日志 -->
+    <logger name="org.apache.ibatis" level="DEBUG"/>
+
+    <!-- 项目自身日志 -->
+    <logger name="com.wanna.webmanagement" level="DEBUG"/>
+
+    <!-- 根日志配置 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>
