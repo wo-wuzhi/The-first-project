@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace = "com.wanna.webmanagement.mapper.EmpMapper" >
+
+    <sql id="queryCondition">
+        <where>
+            <if test="name != null and name != ''">
+                and e.name like concat('%',#{name},'%')
+            </if>
+            <if test="gender != null">
+                and e.gender = #{gender}
+            </if>
+            <if test="begin !=null">
+                and e.entry_date &gt;=#{begin}
+            </if>
+            <if test="end !=null">
+                and e.entry_date &lt;=#{end}
+            </if>
+        </where>
+    </sql>
+
+    <select id="count" resultType="java.lang.Long">
+        select count(*) from emp e
+        <include refid="queryCondition"/>
+    </select>
+
+    <select id="list" resultType="com.wanna.webmanagement.pojo.Emp">
+        select e.*,d.name deptName
+        from emp e left join dept d on e.dept_id = d.id
+        <include refid="queryCondition"/>
+        order by e.update_time desc
+        limit #{start}, #{pageSize}
+    </select>
+
+</mapper>
