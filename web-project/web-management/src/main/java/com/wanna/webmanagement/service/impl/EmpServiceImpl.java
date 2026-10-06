@@ -1,14 +1,19 @@
 package com.wanna.webmanagement.service.impl;
 
+import ch.qos.logback.core.util.StringCollectionUtil;
+import com.wanna.webmanagement.mapper.EmpExprMapper;
 import com.wanna.webmanagement.mapper.EmpMapper;
 import com.wanna.webmanagement.pojo.Emp;
+import com.wanna.webmanagement.pojo.EmpExpr;
 import com.wanna.webmanagement.pojo.PageResult;
 import com.wanna.webmanagement.service.EmpService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -16,6 +21,7 @@ public class EmpServiceImpl implements EmpService {
 
     @Autowired
     private EmpMapper empMapper;
+    private EmpExprMapper empExprMapper;
 
     @Override
     public PageResult<Emp> page(@RequestParam(defaultValue = "1") Integer page,
@@ -25,5 +31,20 @@ public class EmpServiceImpl implements EmpService {
         Integer start = (page - 1) * pageSize;
         List<Emp> rows = empMapper.list(start,pageSize,name,gender,begin,end);
         return new PageResult<>(total,rows);
+    }
+
+    @Override
+    public void save(Emp emp) {
+        emp.setCreateTime(LocalDateTime.now());
+        emp.setUpdateTime(LocalDateTime.now());
+        empMapper.insert(emp);
+
+        List<EmpExpr> exprList=emp.getExprList();
+        if(!CollectionUtils.isEmpty(exprList)){
+            exprList.forEach(e->{
+                e.setEmpId(emp.getId());
+            });
+            empExprMapper.insertBatch(exprList);
+        }
     }
 }

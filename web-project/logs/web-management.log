@@ -1844,3 +1844,32 @@ Caused by: java.lang.IllegalArgumentException: invalid comparison: java.time.Loc
 2026-10-02 22:24:11.561 [tomcat-shutdown] INFO  o.s.boot.tomcat.GracefulShutdown - Graceful shutdown complete
 2026-10-02 22:24:11.561 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
 2026-10-02 22:24:11.567 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2026-10-02 22:55:37.493 [main] INFO  c.w.w.WebManagementApplication - Starting WebManagementApplication using Java 17.0.18 with PID 34644 (E:\Study\JAVA xiangmu\untitled\web-project\web-management\target\classes started by rshh1 in E:\Study\JAVA xiangmu\untitled\web-project)
+2026-10-02 22:55:37.494 [main] DEBUG c.w.w.WebManagementApplication - Running with Spring Boot v4.0.8, Spring v7.0.9
+2026-10-02 22:55:37.494 [main] INFO  c.w.w.WebManagementApplication - No active profile set, falling back to 1 default profile: "default"
+2026-10-02 22:55:37.859 [main] DEBUG o.apache.ibatis.logging.LogFactory - Logging initialized using 'class org.apache.ibatis.logging.slf4j.Slf4jImpl' adapter.
+2026-10-02 22:55:38.045 [main] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-10-02 22:55:38.054 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-10-02 22:55:38.055 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-10-02 22:55:38.055 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-02 22:55:38.091 [main] INFO  o.s.b.w.c.s.WebApplicationContextInitializer - Root WebApplicationContext: initialization completed in 570 ms
+2026-10-02 22:55:38.431 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-10-02 22:55:38.444 [main] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-10-02 22:55:38.448 [main] INFO  c.w.w.WebManagementApplication - Started WebManagementApplication in 1.22 seconds (process running for 1.946)
+2026-10-02 22:55:43.420 [http-nio-8080-exec-6] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-02 22:55:43.421 [http-nio-8080-exec-6] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-10-02 22:55:43.422 [http-nio-8080-exec-6] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-10-02 22:55:43.457 [http-nio-8080-exec-6] INFO  c.w.w.controller.EmpController - 分页查询 1 5 条件 阮 1 2007-09-01 2022-09-01 
+2026-10-02 22:55:43.510 [http-nio-8080-exec-6] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-10-02 22:55:43.789 [http-nio-8080-exec-6] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@3331ec6
+2026-10-02 22:55:43.791 [http-nio-8080-exec-6] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-10-02 22:55:43.796 [http-nio-8080-exec-6] DEBUG c.w.w.mapper.EmpMapper.count - ==>  Preparing: select count(*) from emp e WHERE e.name like concat('%',?,'%') and e.gender = ? and e.entry_date >=? and e.entry_date <=?
+2026-10-02 22:55:43.816 [http-nio-8080-exec-6] DEBUG c.w.w.mapper.EmpMapper.count - ==> Parameters: 阮(String), 1(Integer), 2007-09-01(LocalDate), 2022-09-01(LocalDate)
+2026-10-02 22:55:43.841 [http-nio-8080-exec-6] DEBUG c.w.w.mapper.EmpMapper.count - <==      Total: 1
+2026-10-02 22:55:43.845 [http-nio-8080-exec-6] DEBUG c.w.w.mapper.EmpMapper.list - ==>  Preparing: select e.*,d.name deptName from emp e left join dept d on e.dept_id = d.id WHERE e.name like concat('%',?,'%') and e.gender = ? and e.entry_date >=? and e.entry_date <=? order by e.update_time desc limit ?, ?
+2026-10-02 22:55:43.846 [http-nio-8080-exec-6] DEBUG c.w.w.mapper.EmpMapper.list - ==> Parameters: 阮(String), 1(Integer), 2007-09-01(LocalDate), 2022-09-01(LocalDate), 0(Integer), 5(Integer)
+2026-10-02 22:55:43.852 [http-nio-8080-exec-6] DEBUG c.w.w.mapper.EmpMapper.list - <==      Total: 4
+2026-10-02 22:55:52.042 [SpringApplicationShutdownHook] INFO  o.s.boot.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-10-02 22:55:52.126 [tomcat-shutdown] INFO  o.s.boot.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-10-02 22:55:52.129 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-10-02 22:55:52.132 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
