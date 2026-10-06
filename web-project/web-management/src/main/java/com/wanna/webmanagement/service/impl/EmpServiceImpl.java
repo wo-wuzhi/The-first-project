@@ -1,6 +1,5 @@
 package com.wanna.webmanagement.service.impl;
 
-import ch.qos.logback.core.util.StringCollectionUtil;
 import com.wanna.webmanagement.mapper.EmpExprMapper;
 import com.wanna.webmanagement.mapper.EmpMapper;
 import com.wanna.webmanagement.pojo.Emp;
@@ -9,6 +8,7 @@ import com.wanna.webmanagement.pojo.PageResult;
 import com.wanna.webmanagement.service.EmpService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -21,6 +21,8 @@ public class EmpServiceImpl implements EmpService {
 
     @Autowired
     private EmpMapper empMapper;
+
+    @Autowired
     private EmpExprMapper empExprMapper;
 
     @Override
@@ -33,6 +35,7 @@ public class EmpServiceImpl implements EmpService {
         return new PageResult<>(total,rows);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void save(Emp emp) {
         emp.setCreateTime(LocalDateTime.now());
