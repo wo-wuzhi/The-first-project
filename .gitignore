@@ -1,0 +1,45 @@
+# ============================================================
+# 仓库根 .gitignore —— 作用范围：整个仓库（untitled/ 及其所有子目录）
+# ============================================================
+# 注意：写进这里只对「尚未被跟踪」的文件生效。
+#       已经被跟踪的文件必须先用 `git rm -r --cached <路径>` 停止跟踪，
+#       本次已对 .idea/、logs/、web-project.iml 执行过这一步。
+
+# ---------- Maven 构建产物 ----------
+target/
+build/
+out/
+*.class
+
+# ---------- IntelliJ IDEA ----------
+# IDE 配置属于「本机环境」，不是项目源码；换台机器用 Maven 重新导入即可生成
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# ---------- VS Code / Eclipse ----------
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# ---------- 运行日志 ----------
+logs/
+*.log
+
+# ---------- 本地私有配置（密钥、口令一律不进仓库） ----------
+# 用法：新建 application-local.yaml 放真实密钥，用 spring.profiles.active=local 激活
+application-local.yaml
+application-local.yml
+
+# ---------- 操作系统垃圾文件 ----------
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ---------- DSH 沙箱临时文件（出现在仓库根目录） ----------
+acl-backup-*.json
+acl-backup-*.json.ps1
+acl-report-*.jsonl

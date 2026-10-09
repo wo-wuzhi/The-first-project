@@ -29,10 +29,12 @@ aliyun:
     bucket-name: web-project-wanna
     # 密钥绝对不能写死在代码里：一旦提交，GitHub Push Protection 会直接拦下 push，
     # 而且秘钥进了 Git 历史就等于永久泄露（删掉文件也还留在历史里）。
-    # 改为从环境变量注入：IDEA 运行配置 → Environment variables，
-    # 或系统环境变量 ALIYUN_OSS_ACCESS_KEY_ID / ALIYUN_OSS_ACCESS_KEY_SECRET。
-    # 末尾的 : 是「取不到就用空值」，这样没配密钥时项目照样能启动（上传功能会报错）。
-    access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID:}
-    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:}
+    # 改为从环境变量注入：IDEA 运行配置 → Environment variables，或系统环境变量。
+    # 变量名沿用阿里云官方约定（OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET），
+    # 好处是将来能无缝切到 SDK 自带的环境变量凭证提供者。
+    # 末尾的 : 表示「取不到就用空串」；而 OssConfig 对空凭证会直接抛 IllegalStateException，
+    # 所以没配环境变量时应用是**启动失败**（快速失败，避免带着错配置跑起来）。
+    access-key-id: ${OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
     # 仅当使用自定义域名时才改成 true（用默认域名填 true 会连不上）
     use-cname: false

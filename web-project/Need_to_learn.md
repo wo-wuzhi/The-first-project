@@ -117,3 +117,61 @@ Emp getById(Integer id);
 - **等 Emp 模块彻底稳定之后**（现在正在收尾，别打断节奏）
 - 或者**第一次遇到"分页 + 一对多"组合**的时候 —— 那时会真正体会到"join 会把结果集放大、导致分页数量算错"的坑
 - 后面做「试卷 + 题目列表」「知识点 + 题目列表」时一定会再用到
+
+---
+
+## 4. 配置外置化与秘钥管理（环境变量 / Profile / 配置中心）
+
+**背景**：接入阿里云 OSS 时，把 `access-key-id` / `access-key-secret` 直接写进了
+`application.yaml` 并提交，`git push` 被 GitHub Push Protection 拦下
+（`GH013: Push cannot contain secrets`）。
+当时把两项改成 `${ALIYUN_OSS_ACCESS_KEY_ID:}` 环境变量占位符才推上去 ——
+这是**临时绕过**：只解决了「这一个文件」，没解决「配置该怎么按环境管理」。
+
+**要掌握的知识点**：
+
+| # | 知识点 | 具体内容 |
+|---|---|---|
+| 1 | Spring Boot 配置优先级 | 命令行参数 > 环境变量 > `application-{profile}.yaml` > `application.yaml`。要能解释**为什么环境变量能覆盖打包进 jar 的配置** |
+| 2 | `${ENV:default}` 占位符 | `:` 后面是默认值，写成 `${X:}` 表示「取不到就用空串」。以及 `ALIYUN_OSS_ACCESS_KEY_ID` → `aliyun.oss.access-key-id` 的**宽松绑定（relaxed binding）**规则 |
+| 3 | Profile 多环境 | `application-dev.yaml` / `application-prod.yaml` + `spring.profiles.active`；把本地敏感配置放进 `application-local.yaml` 并写进 `.gitignore` |
+| 4 | `@ConfigurationProperties` vs `@Value` | 本项目 `OssProperties` 用的是前者。弄清它怎么做类型转换、松散绑定，以及配 `@Validated` 做启动期校验 |
+| 5 | **秘钥泄露的处置流程** | 核心认知：**秘钥一旦进入提交历史，改文件是没用的**（历史里还在），必须去阿里云 RAM 控制台**禁用旧 Key + 新建一对**。GitHub 提示里的 "unblock secret" 链接是「允许带着秘钥推」，**绝不要点** |
+| 6 | Git 历史里的秘钥怎么清 | 未推送 → `git commit --amend`（本次就是）；已推送 → `git filter-repo` / BFG + 强推。顺带理解 reflog 和「悬挂对象」还留着旧提交 |
+| 7 | `.gitignore` 该忽略什么 | 已在仓库根加好 `.gitignore`（`target/`、`.idea/`、`*.iml`、`logs/`、`application-local.yaml` 等），并用 `git rm -r --cached` 停掉了旧跟踪。要自己搞懂的是**为什么光写规则不生效、必须先 `--cached`**（已跟踪的文件不受 ignore 约束），以及「IDE 配置到底该不该进仓库」这个判断 |
+| 8 | 生产级方案（了解即可） | 配置中心（Nacos / Apollo）、KMS、云厂商 RAM 角色 / STS 临时凭证 |
+
+**提醒时机**：
+- **下一次要往配置文件里写任何密码、密钥、Token 的时候**（提前拦住，而不是等 push 失败）
+- M9 工程化收尾（要把 `application.yaml` 里的数据库口令一起外置化）
+
+---
+
+## 5. OSS 鉴权：RAM 最小权限 → STS 临时凭证 → 客户端直传
+
+**背景**：本项目现在用「**RAM 用户的永久 AccessKey + 环境变量**」访问 OSS。
+这已经比主账号 AK 好得多，但官方文档明确建议**优先用 STS 临时凭证**。
+现阶段先用永久 AK（简单够用），把 STS 留到「前端直传」或「部署到服务器」时再补。
+
+**要掌握的知识点**：
+
+| # | 知识点 | 具体内容 |
+|---|---|---|
+| 1 | 四种凭证的定位 | 主账号 AK（最危险，别用）→ RAM 用户永久 AK（能长期用，泄露即长期风险）→ STS 临时凭证（有效期 + 可再限权）→ ECS 实例 RAM 角色（代码里干脆不出现密钥） |
+| 2 | 最小权限策略怎么写 | 自定义策略 + `acs:oss:*:*:<bucket>/<前缀>/*`；只给用得上的 Action（本项目够用：`oss:PutObject`；要服务端读图再加 `oss:GetObject`）；**不要**用 `AliyunOSSFullAccess` |
+| 3 | Action 与 Resource 的对应 | 对象级操作（Put/Get/DeleteObject）的 Resource 是 `bucket/前缀/*`；bucket 级操作（如 ListObjects）的 Resource 是 **bucket 本身**。写错就是 `AccessDenied` |
+| 4 | STS 三步 | ① RAM 用户加 `AliyunSTSAssumeRoleAccess`（这只管「能不能调用 AssumeRole」，与 OSS 权限无关）→ ② 建 RAM 角色（信任主体 = 当前云账号）→ ③ 给角色挂 OSS 策略，再 AssumeRole 换临时凭证 |
+| 5 | 两个必须记住的坑 | ① **不能用主账号 AK 调用 AssumeRole**（直接报错）；② AssumeRole 的 `policy` 参数与角色自身策略是**取交集**，不是覆盖 |
+| 6 | 有效期 | `DurationSeconds` 最小 900 秒；角色会话默认 3600 秒、可放宽到最大 43200 秒；过期后必须重新获取 |
+| 7 | 在代码里的落点 | 只需改 `OssConfig.ossClient()` 这一个 `@Bean`：`StaticCredentialsProvider` → 带 `SecurityToken` 的凭证提供者。**这就是把 client 抽成 Bean 的回报** |
+| 8 | 私有 Bucket 下前端怎么显示图片 | 三条路的取舍：公共读（简单但任何人可读）、**预签名 URL**（推荐，服务端签发、有时效）、CDN + 回源鉴权。**永远不要用「公共读写」** |
+| 9 | 客户端直传 | 服务端只签发临时凭证/签名，浏览器直传 OSS。此时必须：绝不把永久 AK 交给前端、配 CORS、用 policy 限制目录和文件大小 |
+
+**官方文档**：
+- [使用 RAM 用户访问密钥访问 OSS](https://help.aliyun.com/zh/oss/developer-reference/use-the-accesskey-pair-of-a-ram-user-to-initiate-a-request)
+- [使用 STS 临时访问凭证访问 OSS](https://help.aliyun.com/zh/oss/developer-reference/use-temporary-access-credentials-provided-by-sts-to-access-oss)
+- [创建 RAM 用户](https://help.aliyun.com/zh/ram/user-guide/create-a-ram-user)
+
+**提醒时机**：
+- **M5 前端**（要把上传放到页面上、要显示头像）时
+- 或**第一次把项目部署到服务器/ECS 上跑**时（那时改用实例 RAM 角色，代码里连密钥都不需要）
