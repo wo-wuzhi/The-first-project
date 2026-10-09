@@ -21,17 +21,33 @@
         </where>
     </sql>
 
+    <delete id="delete">
+        delete from emp where id in 
+        <foreach collection="ids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </delete>
+
     <select id="count" resultType="java.lang.Long">
         select count(*) from emp e
         <include refid="queryCondition"/>
     </select>
 
     <select id="list" resultType="com.wanna.webmanagement.pojo.Emp">
-        select e.*,d.name deptName
+        select e.id, e.username, e.name, e.gender, e.phone, e.job, e.salary,
+               e.image, e.entry_date, e.dept_id, e.create_time, e.update_time,
+               d.name deptName
         from emp e left join dept d on e.dept_id = d.id
         <include refid="queryCondition"/>
         order by e.update_time desc
         limit #{start}, #{pageSize}
+    </select>
+
+    <select id="getExistIds" resultType="java.lang.Integer">
+        select id from emp where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
     </select>
 
 </mapper>

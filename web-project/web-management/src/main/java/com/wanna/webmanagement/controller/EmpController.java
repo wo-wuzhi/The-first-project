@@ -10,6 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -37,4 +38,24 @@ public class EmpController {
         return Result.success();
     }
 
+    @DeleteMapping
+    public Result delete(@RequestParam("id") List<Integer> id) {
+        log.info("删除员工 id为 {} ",id.toString());
+        empService.delete(id);
+        return Result.success();
+    }
+
+    @GetMapping("/{id}")
+    public Result getById(@PathVariable Integer id) {
+        log.info("查询id为 {} 的员工信息",id);
+        Emp emp=empService.getById(id);
+        return Result.success(emp);
+    }
+
+    @PutMapping
+    public Result update(@RequestBody Emp emp) {
+        log.info("修改员工 {} id 为 {}",emp.getName(),emp.getId());
+        empService.update(emp);
+        return Result.success();
+    }
 }

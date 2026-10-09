@@ -1,5 +1,6 @@
 package com.wanna.webmanagement.pojo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -10,6 +11,7 @@ import java.util.List;
 public class Emp {
     private Integer id;
     private String username;
+    @JsonIgnore
     private String password;
     private String name;
     private Integer gender;

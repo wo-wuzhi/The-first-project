@@ -6,9 +6,33 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: 123456
+  # 文件上传大小限制（默认只有 1MB，传头像容易超）
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 mybatis:
   type-aliases-package: com.wanna.webmanagement.pojo
   configuration:
     map-underscore-to-camel-case: true
 
+# ===================== 阿里云 OSS =====================
+aliyun:
+  oss:
+    # 地域 ID，注意不要带 oss- 前缀，也不要加尖括号
+    region: cn-beijing
+    # 用 OSS 默认域名时这一项留空即可（SDK 会按 region 自动推导）
+    # 绑定了自定义域名才填写，如 https://oss.yourdomain.com
+    endpoint:
+    # ↓↓↓ 下面三项必须换成你自己的真实值 ↓↓↓
+    bucket-name: web-project-wanna
+    # 密钥绝对不能写死在代码里：一旦提交，GitHub Push Protection 会直接拦下 push，
+    # 而且秘钥进了 Git 历史就等于永久泄露（删掉文件也还留在历史里）。
+    # 改为从环境变量注入：IDEA 运行配置 → Environment variables，
+    # 或系统环境变量 ALIYUN_OSS_ACCESS_KEY_ID / ALIYUN_OSS_ACCESS_KEY_SECRET。
+    # 末尾的 : 是「取不到就用空值」，这样没配密钥时项目照样能启动（上传功能会报错）。
+    access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:}
+    # 仅当使用自定义域名时才改成 true（用默认域名填 true 会连不上）
+    use-cname: false

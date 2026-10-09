@@ -40,7 +40,7 @@ public class DeptController {
     }
 
     @GetMapping("/depts/{id}")
-    public Result getById(@PathVariable("id") Integer deptId){
+    public Result getById(@PathVariable("id") Integer deptId){  //PathVariable:将{id}赋予deptId
         log.info("查询到id为 {} 的部门",deptId);
         Dept dept=deptService.getById(deptId);
         return Result.success(dept);

@@ -68,3 +68,52 @@
 - **M4 练习闭环开始之前**（正好要用，趁热打铁）
 - 面试前
 - 任何时候想不起来"不可重复读和幻读的区别"的时候
+
+---
+
+## 3. MyBatis 一对多映射（`<resultMap>` + `<collection>`）
+
+**背景**：Emp 模块的「查询回显」需要"查员工 + 带上他的多条工作经历"。
+当时为了先把功能跑通，用了**分两次查**的方案（方案 B）：
+
+```java
+// EmpServiceImpl.getById —— 当前上线版本
+Emp emp = empMapper.getById(id);
+if (emp == null) throw new BusinessException("该员工不存在");
+emp.setExprList(empExprMapper.getById(id));   // ← 第二次查询
+return emp;
+```
+
+**这个方案能工作，也不丢人**（简单、直观、两边独立）。
+但**一对多映射是 MyBatis 区别于"纯 JDBC 包装"的核心能力**，值得单独用 `<resultMap>` 重写一遍。
+
+**要掌握的知识点**：
+
+| # | 知识点 | 具体内容 |
+|---|---|---|
+| 1 | `resultType` vs `resultMap` | `resultType` 是"**一行 → 一个对象**"的自动映射；`resultMap` 是手工定义映射规则，**只有它能表达嵌套的集合 / 关联** |
+| 2 | `<collection>` | 表达"一个对象持有多个子对象"。写 **`ofType`（集合元素类型）**，不是 `javaType` —— 后者是属性本身的类型（`List`），新手最常错 |
+| 3 | **`<id>` 标签的作用** | MyBatis 靠它判断"**哪些行属于同一个父对象**"，用它把 N 行**折叠**成 1 个对象。不写 `<id>` 会得到 N 个重复的父对象，每个只挂一条子记录 |
+| 4 | 列别名不能省 | 两表同名列（`emp.id` 与 `emp_expr.id`、`emp.job` 与 `emp_expr.job`）**必须起别名**（如 `expr_id`、`expr_job`），否则无法区分哪列归属哪个对象 |
+| 5 | `<association>` | 一对一版本（比如"员工 → 所属部门"），和 `<collection>` 是孪生标签 |
+| 6 | 嵌套查询 vs 嵌套结果 | `<collection select="...">` 会产生 N+1 次查询（可配延迟加载 `fetchType="lazy"`）；`<collection>` 里直接写列则是**单次 join**。要知道两者差别 |
+| 7 | 为什么有人偏好"分两次查" | 简单、可读、**分页时不会因为 join 放大行数而算错**。join 聚合在"分页 + 一对多"组合里反而容易出问题 |
+
+**动手改造对象**：`EmpMapper.getById` —— 把现在的
+
+```java
+@Select("select id, username, ... from emp where id = #{id}")
+Emp getById(Integer id);
+```
+
+改成 `resultMap` + `left join emp_expr` + `<collection>`，**一次查完**。
+（方案 A 的完整写法在当时的对话里，需要时可以让我再贴一次。）
+
+**验收标准**：
+- 改造后 `GET /emps/{id}` 返回的 `exprList` 条数和内容都正确
+- **只发一条 SQL** —— 开 `logging.level.com.wanna.webmanagement.mapper=debug`，数一下 `Preparing:` 出现几次
+
+**提醒时机**：
+- **等 Emp 模块彻底稳定之后**（现在正在收尾，别打断节奏）
+- 或者**第一次遇到"分页 + 一对多"组合**的时候 —— 那时会真正体会到"join 会把结果集放大、导致分页数量算错"的坑
+- 后面做「试卷 + 题目列表」「知识点 + 题目列表」时一定会再用到

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/web-management/src/main/java/com/wanna/webmanagement/mapper/EmpExprMapper.java" value="f3986140-e6d2-493f-8610-91cbaeb5130e" />
     <file url="file://$PROJECT_DIR$/web-management/src/main/java/com/wanna/webmanagement/mapper/EmpMapper.java" value="f3986140-e6d2-493f-8610-91cbaeb5130e" />
+    <file url="file://$PROJECT_DIR$/web-management/src/main/resources/com/wanna/webmanagement/mapper/EmpExprMapper.xml" value="f3986140-e6d2-493f-8610-91cbaeb5130e" />
+    <file url="file://$PROJECT_DIR$/web-management/src/main/resources/com/wanna/webmanagement/mapper/EmpMapper.xml" value="f3986140-e6d2-493f-8610-91cbaeb5130e" />
   </component>
 </project>
