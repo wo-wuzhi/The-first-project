@@ -16,9 +16,6 @@ public class UploadController {
 
     private final OssUtil ossUtil;
 
-    /**
-     * 上传文件到 OSS，返回文件的可访问 URL。
-     */
     @PostMapping("/upload")
     public Result upload(@RequestParam("file") MultipartFile file) {
         log.info("收到上传请求: {}", file.getOriginalFilename());

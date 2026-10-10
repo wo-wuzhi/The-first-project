@@ -50,4 +50,40 @@
         </foreach>
     </select>
 
+    <select id="countJobData" resultType="java.util.Map">
+        select
+            (case when job=1 then '班主任'
+                  when job=2 then '讲师'
+                  when job=3 then '学工主管'
+                  when job=4 then '教研主管'
+                  when job=5 then '咨询师'
+                  else '其它' end) pos,
+            count(*) num
+        from emp group by job order by num;
+    </select>
+
+    <select id="countGenderData" resultType="java.util.Map">
+        select (if(gender = 1, '男性员工', '女性员工')) gender,
+               count(*) num
+        from emp
+        group by gender;
+    </select>
+
+    <update id="update">
+        update emp
+        <set>
+            <if test="username != null and username != ''">username = #{username},</if>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="phone != null and phone != ''">phone = #{phone},</if>
+            <if test="job != null">job = #{job},</if>
+            <if test="salary != null">salary = #{salary},</if>
+            <if test="image != null and image != ''">image = #{image},</if>
+            <if test="entryDate != null">entry_date = #{entryDate},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            update_time = #{updateTime}
+        </set>
+        where id = #{id}
+    </update>
+
 </mapper>

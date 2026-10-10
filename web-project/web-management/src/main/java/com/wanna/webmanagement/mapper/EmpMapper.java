@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface EmpMapper {
@@ -32,11 +33,10 @@ public interface EmpMapper {
             " create_time, update_time from emp where id = #{id}")
     Emp getById(Integer id);
 
-    @Update("update emp set username = #{username}, name = #{name}, gender = #{gender}, " +
-            "phone = #{phone}, job = #{job}, salary = #{salary}, image = #{image}, " +
-            "entry_date = #{entryDate}, dept_id = #{deptId}, update_time = #{updateTime} " +
-            "where id = #{id}")
     int update(Emp emp);
 
+    List<Map<String,Object>> countJobData();
+
+    List<Map<String, Object>> countGenderData();
 
 }
