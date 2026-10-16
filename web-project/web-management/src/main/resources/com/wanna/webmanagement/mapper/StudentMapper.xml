@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.wanna.webmanagement.mapper.StudentMapper">
+
+    <!-- 查询条件抽出来，保证 count 和 list 用的是同一套条件 -->
+    <sql id="queryCondition">
+        <where>
+            <if test="name != null and name != ''">
+                and s.name like concat('%',#{name},'%')
+            </if>
+            <if test="degree != null">
+                and s.degree = #{degree}
+            </if>
+            <if test="clazzId != null">
+                and s.clazz_id = #{clazzId}
+            </if>
+        </where>
+    </sql>
+
+    <select id="count" resultType="java.lang.Long">
+        select count(*) from student s
+        <include refid="queryCondition"/>
+    </select>
+
+    <select id="list" resultType="com.wanna.webmanagement.pojo.Student">
+        select s.id, s.name, s.no, s.gender, s.phone, s.id_card, s.is_college,
+               s.address, s.degree, s.graduation_date, s.clazz_id,
+               s.violation_count, s.violation_score, s.create_time, s.update_time,
+               c.name as clazzName
+        from student s left join clazz c on s.clazz_id = c.id
+        <include refid="queryCondition"/>
+        order by s.update_time desc
+        limit #{start}, #{pageSize}
+    </select>
+
+    <select id="getById" resultType="com.wanna.webmanagement.pojo.Student">
+        select s.id, s.name, s.no, s.gender, s.phone, s.id_card, s.is_college,
+               s.address, s.degree, s.graduation_date, s.clazz_id,
+               s.violation_count, s.violation_score, s.create_time, s.update_time,
+               c.name as clazzName
+        from student s left join clazz c on s.clazz_id = c.id
+        where s.id = #{id}
+    </select>
+
+    <update id="update">
+        update student
+        <set>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="no != null and no != ''">no = #{no},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="phone != null and phone != ''">phone = #{phone},</if>
+            <if test="idCard != null and idCard != ''">id_card = #{idCard},</if>
+            <if test="isCollege != null">is_college = #{isCollege},</if>
+            <if test="address != null and address != ''">address = #{address},</if>
+            <if test="degree != null">degree = #{degree},</if>
+            <if test="graduationDate != null">graduation_date = #{graduationDate},</if>
+            <if test="clazzId != null">clazz_id = #{clazzId},</if>
+            update_time = #{updateTime}
+        </set>
+        where id = #{id}
+    </update>
+
+    <select id="getExistIds" resultType="java.lang.Integer">
+        select id from student where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="countDegreeData" resultType="java.util.Map">
+        select
+            case
+                when degree=1 then '初中'
+                when degree=2 then '高中'
+                when degree=3 then '大专'
+                when degree=4 then '本科'
+                when degree=5 then '硕士'
+                when degree=6 then '博士'
+                else '其它'
+            end degree,
+               count(*) num from student group by degree
+    </select>
+
+    <!--
+        班级人数统计。
+        两个关键点：
+        1. 用 left join —— 没有学员的班级也要出现在结果里（人数为 0），
+           否则前端图表会漏掉空班级
+        2. 用 count(s.id) 而不是 count(*) —— left join 会给没学员的班级补一行 NULL，
+           count(*) 会把它算成 1，count(s.id) 只数非 NULL 的行，才是真正的 0
+    -->
+    <select id="countClazzData" resultType="java.util.Map">
+        select c.name as clazzName,
+               count(s.id) as num
+        from clazz c left join student s on c.id = s.clazz_id
+        group by c.id, c.name
+        order by c.id
+    </select>
+
+    <delete id="deleteByIds">
+        delete from student where id in
+        <foreach collection="ids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

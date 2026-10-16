@@ -247,3 +247,49 @@ end as status
 - **每次写含 `NULL` 可能的条件时**（尤其 `NOT IN`、`!=`、`count(列)`）先问一句「三值逻辑会怎么走」
 - **「SQL 看着没错但查不出数据」时**的第一个怀疑对象
 - 排查 `@Transactional` 的怪异行为时也常绕到「`default`/`NULL` 导致条件失效」这条线上
+
+---
+
+## 8. Git 核心知识：三区模型、`.gitignore` vs `.gitattributes`、行尾策略
+
+> **备注：复习内容 + 实践内容** —— 三区模型是学过的，行尾与属性声明是这次 `git add` 提示
+> `LF will be replaced by CRLF` 才真正用上的，需要在项目里落地一次才算掌握。
+
+**背景**：`git add` 时出现
+
+```
+in the working copy of '.../Need_to_learn.md', LF will be replaced by CRLF the next time Git touches it
+```
+
+追查发现：`core.autocrlf=true`（Windows 版 Git 安装时默认勾选）加上**仓库根没有 `.gitattributes`**，
+导致根目录文件（`Need_to_learn.md`、`AGENTS.md`）没有任何行尾规则覆盖。
+`web-management/.gitattributes` 里已有的两条规则（`/mvnw text eol=lf`、`*.cmd text eol=crlf`）
+**只管得住自己所在目录及以下** —— 这是本次踩到的关键点。
+
+**要掌握的知识点**：
+
+| # | 知识点 | 具体内容 |
+|---|---|---|
+| 1 | **三区模型** | 工作区（working tree）→ 暂存区（index / staging）→ 仓库（repository / HEAD）。`git add` = 工作区 → 暂存区；`git commit` = 暂存区 → 仓库。理解这三区，才能明白「未跟踪 / 已修改 / 已暂存」三种状态从哪来 |
+| 2 | **`git status` 到底在比什么** | 左列 = 暂存区 vs HEAD，右列 = 工作区 vs 暂存区。`M ` 和 ` M` 一个字母的位置差别，含义完全不同 |
+| 3 | `core.autocrlf` 三种取值 | `true`（Windows 默认）：提交 CRLF→LF，签出 LF→CRLF；`input`（Linux/Mac）：只提交时转换，签出不转；`false`：完全不管。**"替换成 CRLF"是发生在工作区的，仓库里始终是 LF** |
+| 4 | **`.gitignore` vs `.gitattributes`** | `.gitignore` 管**未跟踪文件**（决定"要不要跟踪"）；`.gitattributes` 管**已跟踪文件**（决定"如何存储与比较"：行尾、二进制、diff 方式、合并策略、linguist 语言统计）。两者职责完全不同 |
+| 5 | **作用域** | 两者都是「**所在目录及所有子目录**」。所以根目录的文件必须由**根目录**的 `.gitattributes` 覆盖，写在深层目录里管不到它 |
+| 6 | 为什么会警告"LF will be replaced by CRLF" | 这是在 `git add` 时的提示：文件当前是 LF，但按 `autocrlf=true` 的策略，**下次签出会变成 CRLF**。是 info 级提示，不影响提交内容 |
+| 7 | **为什么行尾重要** | `mvnw` 这类 Shell 脚本带 CRLF 会报 `bad interpreter: No such file or directory`（`^M` 被当成解释器路径的一部分）；`.cmd` 用 LF 又可能被 cmd.exe 解析异常。真实坑，不是洁癖 |
+| 8 | 三条排查命令 | `git ls-files --eol`（看每个文件 `i/` 仓库、`w/` 工作区、`attr/` 规则三处行尾）；`git check-attr text eol -- <file>`（问某文件最终适用哪条规则）；`git config --get core.autocrlf` |
+| 9 | 「整个文件都被改了」的诡异 diff | 先怀疑行尾规则，用知识点 8 的命令确认；确认后**单独提交一次**，别和真实改动混在一起 |
+| 10 | **`.gitignore` 写完为什么不生效** | **已跟踪的文件不受 `.gitignore` 约束**。要让规则生效必须 `git rm -r --cached <path>` 停止跟踪（工作区文件保留），再提交 |
+| 11 | `git add --renormalize .` | 按新规则重新规范化已跟踪文件（行尾策略调整后使用）。**先看清影响范围再执行** |
+| 12 | 其他常用面（了解 + 会用） | `git reflog` 找回误删提交；`git revert`（新增反向提交，安全）vs `git reset --hard`（改写历史，危险）；`git stash` 暂存现场；`git diff --cached`（看暂存区） |
+
+**在本项目里的落点**：
+- 已在**仓库根**新建 `.gitattributes`：`* text=auto eol=lf` 统一 LF，`*.cmd text eol=crlf`，二进制显式声明 `binary`
+- `web-management/.gitattributes` 的 `/mvnw text eol=lf` 现在与根规则重复了，**可以保留**（无害），不用专门清理
+- 根目录 `.gitattributes` 生效后：规则从「每台机器各自的全局配置」搬到「**跟着仓库走的声明文件**」，
+  别人克隆或将来在 Linux/CI 上构建，拿到的行尾都一致
+
+**提醒时机**：
+- 再遇到「`git diff` 显示整个文件都变了」的时候
+- 调整 `.gitattributes` / `core.autocrlf` / 行尾策略时
+- 写 `.gitignore` 却发现不生效时（回到知识点 10）

@@ -11,5 +11,5 @@ import java.util.List;
 @NoArgsConstructor
 public class JobAnalysis {
     private List<String> jobList;
-    private List<Integer> countList;
+    private List<Integer> dataList;
 }

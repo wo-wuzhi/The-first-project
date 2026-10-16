@@ -1,5 +1,6 @@
 package com.wanna.webmanagement.service;
 
+import com.wanna.webmanagement.pojo.ClazzAnalysis;
 import com.wanna.webmanagement.pojo.JobAnalysis;
 
 import java.util.List;
@@ -11,4 +12,7 @@ public interface ReportService {
 
     List<Map<String, Object>> getEmpGenderData();
 
+    List<Map<String, Object>> getStudentDegreeData();
+
+    ClazzAnalysis getStudentCountData();
 }

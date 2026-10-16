@@ -1,5 +1,6 @@
 package com.wanna.webmanagement.controller;
 
+import com.wanna.webmanagement.pojo.ClazzAnalysis;
 import com.wanna.webmanagement.pojo.JobAnalysis;
 import com.wanna.webmanagement.pojo.Result;
 import com.wanna.webmanagement.service.ReportService;
@@ -32,5 +33,19 @@ public class ReportController {
         log.info("统计员工性别对应人数");
         List<Map<String,Object>> genderAnalysis = reportService.getEmpGenderData();
         return Result.success(genderAnalysis);
+    }
+
+    @GetMapping("/studentDegreeData")
+    public Result getStudentDegreeData(){
+        log.info("统计学员学历");
+        List<Map<String,Object>> studentDegreeAnalysis = reportService.getStudentDegreeData();
+        return Result.success(studentDegreeAnalysis);
+    }
+
+    @GetMapping("/studentCountData")
+    public Result getStudentCountData(){
+        log.info("统计每个班级的人数");
+        ClazzAnalysis clazzAnalysis = reportService.getStudentCountData();
+        return Result.success(clazzAnalysis);
     }
 }

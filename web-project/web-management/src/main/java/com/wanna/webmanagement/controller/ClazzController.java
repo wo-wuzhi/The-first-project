@@ -24,8 +24,8 @@ public class ClazzController {
     public Result pageShow(@RequestParam(defaultValue = "1") Integer page,
                            @RequestParam(defaultValue = "10") Integer pageSize,
                            String name,
-                           @DateTimeFormat(pattern = "yyyy/MM/dd") LocalDate begin,
-                           @DateTimeFormat(pattern = "yyyy/MM/dd") LocalDate end){
+                           @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate begin,
+                           @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end){
         log.info("分页 {} {} 查询班级 条件：{} {} {}",page,pageSize,name,begin,end);
         PageResult<Clazz>pageResult=clazzService.pageShow(page,pageSize,name,begin,end);
         return Result.success(pageResult);

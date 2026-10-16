@@ -1,0 +1,27 @@
+# Git 行尾与文本属性声明
+# 本文件放在仓库根，规则作用于整个仓库（含 web-project/ 与 web-management/）。
+#
+# 目标：统一用 LF（仓库与工作区一致），不再依赖每台机器各自的 core.autocrlf 设置。
+# 背景与踩坑记录见 web-project/Need_to_learn.md 「Git 核心知识」一节。
+
+# 让 Git 自动识别文本文件，并在仓库中一律以 LF 存储。
+* text=auto eol=lf
+
+# Windows 批处理：cmd.exe 对 LF 兼容性差，必须保持 CRLF。
+*.cmd text eol=crlf
+
+# 二进制文件：禁止任何行尾转换，避免文件被改坏。
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.jar  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+
+# 明确标记为二进制：Git 不 diff、不合并，避免冲突标记破坏文件。
+*.xlsx binary
+*.docx binary
+*.pdf  binary
