@@ -175,3 +175,75 @@ Emp getById(Integer id);
 **提醒时机**：
 - **M5 前端**（要把上传放到页面上、要显示头像）时
 - 或**第一次把项目部署到服务器/ECS 上跑**时（那时改用实例 RAM 角色，代码里连密钥都不需要）
+
+---
+
+## 6. SQL `CASE` 表达式 与「SELECT 别名不能在 WHERE 中引用」
+
+**背景**：`ClazzMapper.list` 需要算出班级状态。数据库 `clazz` 表**没有 `status` 列**，
+所以用 `case` 表达式现算一个虚拟列：
+
+```sql
+case
+    when curdate() < c.begin_date then '未开班'
+    when curdate() > c.end_date   then '已结课'
+    else '在读'
+end as status
+```
+
+**要掌握的知识点**：
+
+| # | 知识点 | 具体内容 |
+|---|---|---|
+| 1 | 两种写法 | **搜索 CASE**：`case when 条件 then 值 ... end`；**简单 CASE**：`case 列 when 值 then 值 ... end`。本项目用的是前者 |
+| 2 | 三个必写的部分 | `end` 不能省；`case` 后**不能加括号**（它不是函数！）；`as 别名` 在 MyBatis 自动映射里**不能省**，否则 `Clazz.status` 永远是 `null` |
+| 3 | **短路求值** | 从上往下逐条判断，命中第一条就返回，后面不再看 → **`when` 的顺序会影响结果**。区间判断里要把「更严格的条件」放前面 |
+| 4 | `else` 缺省 | 全部不匹配且**没有 `else`** 时返回 **`NULL`**（不是空串、不是报错）。想避免前端处理空值就写 `else` |
+| 5 | 区间边界的闭开性 | 「开课当天」「结课当天」算不算在读？`<=` / `<` 一字之差就是业务语义。现在用 `else` 兜底 = 两端都算「在读」 |
+| 6 | `curdate()` vs `now()` | `curdate()` 只有日期（`2026-10-16`），`now()` 带时分秒。与 `date` 类型的列比较**必须用 `curdate()`**，否则结课当天会因为 `20:00 > 00:00` 而**提前一天**判成「已结课」 |
+| 7 | **执行顺序（本节最核心）** | `FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT`。`WHERE` 比 `SELECT` **先**执行 → **WHERE 里不能用 SELECT 的别名**，报 `Unknown column 'xxx' in 'where clause'`；`ORDER BY` / `HAVING` 在 `SELECT` 之后，**可以**用别名 |
+| 8 | 派生列不是物理列 | 虚拟列**不能**出现在 `update ... set status = ?` 里，也无法建索引。要按状态统计，最终仍要回到 `begin_date` / `end_date` 做条件，或在 Service 层用 Java 算 |
+
+**在本项目里的落点**：
+- [ClazzMapper.xml](web-management/src/main/resources/com/wanna/webmanagement/mapper/ClazzMapper.xml) 的 `list` —— 现在写了一半（缺 `end`、缺 `as status`，且 `case(` 多了括号），要补完
+- **前端一旦要「按状态筛选班级」**，就会撞上知识点 7。两条出路：
+  - 方案 A：把 CASE **原样再抄一遍**放进 `WHERE`（改一处要改两处，易漏）
+  - 方案 B（推荐）：子查询包一层 —— `select * from (原查询) t where t.status = #{status}`
+- ⚠️ 用手写 `limit #{start}, #{pageSize}` 分页时，选了方案 B 后 **`count` 查询也要跟着包一层**，否则总数算错
+  （若走 PageHelper，它生成 count SQL 时对子查询是支持的）
+
+**提醒时机**：
+- **给班级列表加「状态」筛选条件的那一刻**（也就是必须解决「别名不能在 WHERE 里用」的时候）
+- 任何时候写出 `Unknown column ... in 'where clause'` 这个报错时，先回来确认执行顺序
+
+---
+
+## 7. SQL 三值逻辑：`NULL` 参与比较的结果是「未知」
+
+**背景**：上面那个 `case` 里，如果有班级的 `end_date` 还没定（`NULL`），
+第二个条件 `curdate() > c.end_date` 的结果是 **`NULL`（未知）**，**不是 `false`**——
+于是它落到 `else`，班级显示「在读」。这个行为恰好合乎预期，但**纯属侥幸**：
+一旦某个 `when` 依赖 `NULL` 列比较，结果就会变得难以预测。
+
+**要掌握的知识点**：
+
+| # | 知识点 | 具体内容 |
+|---|---|---|
+| 1 | 三值逻辑 | SQL 布尔运算有 **`TRUE` / `FALSE` / `UNKNOWN`** 三种结果。任何与 `NULL` 的比较（`=`、`>`、`<`、`!=`）结果都是 **`UNKNOWN`**，而不等于 `FALSE` |
+| 2 | `NULL = NULL` 是假 | 连自己都不等于自己，必须写 `IS NULL` / `IS NOT NULL`（MySQL 的 `<=>` 是「安全等于」，可比较两列是否都为 NULL） |
+| 3 | **`NOT IN` + NULL 是灭顶之灾** | `x NOT IN (1, NULL)` 永远为 `UNKNOWN` → **查不出任何行**。这是「SQL 看着没错、结果全空」的头号元凶（对应 `IN` 侧则是 `x IN (1, NULL)` 只匹配到 1） |
+| 4 | `WHERE` 只保留 `TRUE` | `FALSE` 和 `UNKNOWN` **都会被过滤掉** —— 所以「漏数据」通常不是条件写反，而是 NULL 让条件变成了 UNKNOWN |
+| 5 | 聚合函数的忽略规则 | `count(*)` 数所有行；`count(列)` **跳过 NULL**；`sum`/`avg` 忽略 NULL（`avg` 的分母因此变小）；想让 NULL 参与就用 `ifnull()` / `coalesce()` |
+| 6 | `!=` 的陷阱 | `where status != 1` **不会**选出 `status IS NULL` 的行，很多人以为它会 |
+| 7 | 约束与默认值 | `NOT NULL DEFAULT` 设计时就要挡住；本项目约定时间字段由 Service 层赋值（`LocalDateTime.now()`），因此不允许为 NULL |
+| 8 | Java 侧的呼应 | `Integer` 拆箱为 `int` 遇 `null` 抛 `NullPointerException`；所以 POJO 时间/数字字段用包装类型（`Integer`、`LocalDate`）而不是基本类型 |
+
+**本项目里的检查动作**：
+- 回头确认 `clazz.end_date`、`clazz.begin_date` 在表结构里**是否允许为 NULL**
+- 复习 [EmpMapper.xml](web-management/src/main/resources/com/wanna/webmanagement/mapper/EmpMapper.xml) 那个 `getExistIds` 的 `foreach`：
+  若 `ids` 集合里混入一个 `null` 元素，`id in (3, NULL)` 会**静默漏掉结果** —— 集合入口处就该过滤 `null`
+
+**提醒时机**：
+- **每次写含 `NULL` 可能的条件时**（尤其 `NOT IN`、`!=`、`count(列)`）先问一句「三值逻辑会怎么走」
+- **「SQL 看着没错但查不出数据」时**的第一个怀疑对象
+- 排查 `@Transactional` 的怪异行为时也常绕到「`default`/`NULL` 导致条件失效」这条线上

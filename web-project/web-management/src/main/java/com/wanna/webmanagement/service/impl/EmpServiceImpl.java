@@ -80,7 +80,7 @@ public class EmpServiceImpl implements EmpService {
         if(emp==null) {
             throw new BusinessException("该员工不存在");
         }
-        emp.setExprList(empExprMapper.getById(emp.getId()));
+        emp.setExprList(empExprMapper.getById(id));
         return emp;
     }
 
