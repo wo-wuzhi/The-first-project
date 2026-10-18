@@ -1,6 +1,7 @@
 package com.wanna.webmanagement.service;
 
 import com.wanna.webmanagement.pojo.Emp;
+import com.wanna.webmanagement.pojo.LoginInfo;
 import com.wanna.webmanagement.pojo.PageResult;
 
 import java.time.LocalDate;
@@ -19,4 +20,6 @@ public interface EmpService {
     Emp getById(Integer id);
 
     void update(Emp emp);
+
+    LoginInfo login(Emp emp);
 }

@@ -5,6 +5,7 @@ import com.wanna.webmanagement.mapper.EmpExprMapper;
 import com.wanna.webmanagement.mapper.EmpMapper;
 import com.wanna.webmanagement.pojo.Emp;
 import com.wanna.webmanagement.pojo.EmpExpr;
+import com.wanna.webmanagement.pojo.LoginInfo;
 import com.wanna.webmanagement.pojo.PageResult;
 import com.wanna.webmanagement.service.EmpService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,5 +103,14 @@ public class EmpServiceImpl implements EmpService {
                 empExprMapper.insertBatch(exprList);
             }
         }
+    }
+
+    @Override
+    public LoginInfo login(Emp emp) {
+        Emp loginEmp = empMapper.getMessage(emp);
+        if(loginEmp!=null){
+            LoginInfo loginInfo=new LoginInfo(loginEmp.getId(), loginEmp.getUsername(), loginEmp.getName(), null);
+        }
+        return null;
     }
 }

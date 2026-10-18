@@ -39,4 +39,6 @@ public interface EmpMapper {
 
     List<Map<String, Object>> countGenderData();
 
+    @Select("select id, username, password, name from emp where username=#{username} and password=#{password}")
+    Emp getMessage(Emp emp);
 }
