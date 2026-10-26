@@ -38,3 +38,8 @@ aliyun:
     access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
     # 仅当使用自定义域名时才改成 true（用默认域名填 true 会连不上）
     use-cname: false
+
+
+jwt:
+  secret-key: 6L+Z5Liq5a+G5YyZ57ud5LiN5Lya6KKr56C06Kej
+  expiration: 43200000
