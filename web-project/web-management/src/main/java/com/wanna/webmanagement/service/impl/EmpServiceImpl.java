@@ -8,6 +8,9 @@ import com.wanna.webmanagement.pojo.EmpExpr;
 import com.wanna.webmanagement.pojo.LoginInfo;
 import com.wanna.webmanagement.pojo.PageResult;
 import com.wanna.webmanagement.service.EmpService;
+import com.wanna.webmanagement.util.BaseContext;
+import com.wanna.webmanagement.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,9 +18,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class EmpServiceImpl implements EmpService {
@@ -27,6 +28,9 @@ public class EmpServiceImpl implements EmpService {
 
     @Autowired
     private EmpExprMapper empExprMapper;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @Override
     public PageResult<Emp> page(Integer page, Integer pageSize,
@@ -107,10 +111,17 @@ public class EmpServiceImpl implements EmpService {
 
     @Override
     public LoginInfo login(Emp emp) {
+
         Emp loginEmp = empMapper.getMessage(emp);
-        if(loginEmp!=null){
-            LoginInfo loginInfo=new LoginInfo(loginEmp.getId(), loginEmp.getUsername(), loginEmp.getName(), null);
+        if(loginEmp==null){
+            return null;
         }
-        return null;
+
+        Map<String,Object> claims=new HashMap<>();
+        claims.put("id",loginEmp.getId());
+        claims.put("username",loginEmp.getName());
+        String token=jwtUtil.generateToken(claims);
+
+        return new LoginInfo(loginEmp.getId(), loginEmp.getUsername(), loginEmp.getName(),  token);
     }
 }

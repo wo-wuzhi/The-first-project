@@ -61,7 +61,7 @@ public class StudentController {
     @PutMapping("/violation/{id}/{score}")
     public Result violation(@PathVariable Integer id, @PathVariable Integer score) {
         log.info("违纪处理 id {} score {}", id, score);
-        studentService.violation(id,score);
+        studentService.addViolation(id,score);
         return Result.success();
     }
 }

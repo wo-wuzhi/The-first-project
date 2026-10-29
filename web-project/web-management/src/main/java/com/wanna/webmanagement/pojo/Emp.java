@@ -1,17 +1,19 @@
 package com.wanna.webmanagement.pojo;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
+
 @Data
 public class Emp {
     private Integer id;
     private String username;
-    @JsonIgnore
+    @JsonProperty(access = WRITE_ONLY)
     private String password;
     private String name;
     private Integer gender;
