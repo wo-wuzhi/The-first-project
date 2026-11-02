@@ -1,5 +1,6 @@
 package com.wanna.webmanagement.controller;
 
+import com.wanna.webmanagement.anno.Log;
 import com.wanna.webmanagement.pojo.Clazz;
 import com.wanna.webmanagement.pojo.PageResult;
 import com.wanna.webmanagement.pojo.Result;
@@ -31,6 +32,7 @@ public class ClazzController {
         return Result.success(pageResult);
     }
 
+    @Log
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id){
         log.info("删除id为 {} 的班级",id);
@@ -38,9 +40,10 @@ public class ClazzController {
         return Result.success();
     }
 
+    @Log
     @PostMapping
     public Result save(@RequestBody Clazz clazz){
-        log.info("添加班级 {}",clazz);
+        log.info("添加班级 {}",clazz.getName());
         clazzService.save(clazz);
         return Result.success();
     }
@@ -52,9 +55,10 @@ public class ClazzController {
         return Result.success(clazz);
     }
 
+    @Log
     @PutMapping
     public Result update(@RequestBody Clazz clazz){
-        log.info("修改班级 {}",clazz);
+        log.info("修改班级 {} id为 {}",clazz.getName(),clazz.getId());
         clazzService.update(clazz);
         return Result.success();
     }

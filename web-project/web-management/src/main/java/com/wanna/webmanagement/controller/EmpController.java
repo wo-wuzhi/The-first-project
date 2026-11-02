@@ -1,5 +1,6 @@
 package com.wanna.webmanagement.controller;
 
+import com.wanna.webmanagement.anno.Log;
 import com.wanna.webmanagement.pojo.Emp;
 import com.wanna.webmanagement.pojo.PageResult;
 import com.wanna.webmanagement.pojo.Result;
@@ -31,13 +32,15 @@ public class EmpController {
         return Result.success(pageResult);
     }
 
+    @Log
     @PostMapping
     public Result save(@RequestBody Emp emp) {
-        log.info("新增员工 {}",emp);
+        log.info("新增员工 {}", emp.getName());
         empService.save(emp);
         return Result.success();
     }
 
+    @Log
     @DeleteMapping
     public Result delete(@RequestParam("ids") List<Integer> ids) {
         log.info("删除员工 id为 {} ",ids.toString());
@@ -52,6 +55,7 @@ public class EmpController {
         return Result.success(emp);
     }
 
+    @Log
     @PutMapping
     public Result update(@RequestBody Emp emp) {
         log.info("修改员工 {} id 为 {}",emp.getName(),emp.getId());

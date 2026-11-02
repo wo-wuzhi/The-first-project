@@ -1,5 +1,6 @@
 package com.wanna.webmanagement.controller;
 
+import com.wanna.webmanagement.anno.Log;
 import com.wanna.webmanagement.pojo.PageResult;
 import com.wanna.webmanagement.pojo.Result;
 import com.wanna.webmanagement.pojo.Student;
@@ -30,9 +31,10 @@ public class StudentController {
         return Result.success(pageResult);
     }
 
+    @Log
     @PostMapping
     public Result save(@RequestBody Student student) {
-        log.info("新增学员 {}", student);
+        log.info("新增学员 {}", student.getName());
         studentService.save(student);
         return Result.success();
     }
@@ -44,13 +46,15 @@ public class StudentController {
         return Result.success(student);
     }
 
+    @Log
     @PutMapping
     public Result update(@RequestBody Student student) {
-        log.info("修改学员 {}", student);
+        log.info("修改学员 {} id为 {}", student.getName(), student.getId());
         studentService.update(student);
         return Result.success();
     }
 
+    @Log
     @DeleteMapping("/{ids}")
     public Result delete(@PathVariable List<Integer> ids) {
         log.info("删除学员 ids为 {}", ids);
@@ -58,6 +62,7 @@ public class StudentController {
         return Result.success();
     }
 
+    @Log
     @PutMapping("/violation/{id}/{score}")
     public Result violation(@PathVariable Integer id, @PathVariable Integer score) {
         log.info("违纪处理 id {} score {}", id, score);

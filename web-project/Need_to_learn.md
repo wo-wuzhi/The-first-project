@@ -293,3 +293,135 @@ in the working copy of '.../Need_to_learn.md', LF will be replaced by CRLF the n
 - 再遇到「`git diff` 显示整个文件都变了」的时候
 - 调整 `.gitattributes` / `core.autocrlf` / 行尾策略时
 - 写 `.gitignore` 却发现不生效时（回到知识点 10）
+
+---
+
+## 9. 操作日志异步化（`@Async` + ThreadLocal 跨线程传递）
+
+**背景**：`aop/LogAspect` 现在在 `finally` 里**同步**执行 `operateLogMapper.insert(...)`。
+功能正确，但每做一次增删改，接口都要多等一次数据库写入。
+日志是"旁路需求"，不该拖慢主流程 —— 所以计划改成异步写入。
+
+**这不是简单地加个 `@Async` 就完事**，它牵出两个必须搞懂的问题：
+**线程池怎么配**、**ThreadLocal 里的登录用户 id 怎么带过去**。
+
+**要掌握的知识点**：
+
+| # | 知识点 | 具体内容 |
+|---|---|---|
+| 1 | `@Async` 生效的两个前提 | ① 主类（或配置类）上有 `@EnableAsync`；② **必须通过 Spring 代理调用** —— 同类内部 `this.saveLog()` 不会异步（代理没被绕过） |
+| 2 | `@Async` 方法的签名限制 | 只能是 `public`；返回值要么 `void`，要么 `Future<T>` / `CompletableFuture<T>`。返回 `void` 时异常**不会抛给调用方**（需要自定义 `AsyncUncaughtExceptionHandler`） |
+| 3 | **默认线程池的坑** | 不配 Executor 时 Spring 用 `SimpleAsyncTaskExecutor` —— **每次调用新建一个线程、不复用**，并发高时线程爆炸。真实项目必须自定义 `ThreadPoolTaskExecutor` |
+| 4 | 线程池核心参数怎么定 | `corePoolSize` / `maxPoolSize` / `queueCapacity` / `keepAliveSeconds` / 拒绝策略。日志任务的特点：**短、高频、可丢** → 更适合小 `maxPoolSize` + 有界队列 + `CallerRunsPolicy` |
+| 5 | **ThreadLocal 跨线程必丢** | `BaseContext` 用的是 `ThreadLocal`，`@Async` 换了线程 → `getCurrentId()` 返回 `null`。这正是现在 `LogAspect` **必须在主线程里先取出 `operateEmpId`** 的原因（现有写法已经是安全的） |
+| 6 | 为什么 `InheritableThreadLocal` 也救不了 | 它只在**创建子线程时**复制一次值；而线程池的线程是**复用**的，不会重新创建 → 继承不到。（`@Async` 场景的经典误解） |
+| 7 | 正确的跨线程传递方式 | `TaskDecorator`（把父线程的上下文复制到任务里）+ `RequestContextHolder` 的 `setRequestAttributes(..., true)`；或者干脆**把 id 作为方法参数传进去**（最简单可靠） |
+| 8 | 日志写入失败要不要影响业务 | **不能影响**。现在 `insert` 外面包了 `try-catch` 就是这个意思 —— 日志是附属品，丢了可以忍，业务失败不可忍 |
+| 9 | 另一种思路：消息队列 | 日志量大时，`@Async` 仍会占 JVM 内存和数据库连接。可以投递到 MQ，由消费者批量入库（了解即可，本项目用不上） |
+
+**在本项目里的落点**：
+- `aop/LogAspect.recordLog` —— 把 `insert` 抽成另一个 Bean 的 `@Async` 方法，
+  或者配一个 `ThreadPoolTaskExecutor` 后直接 `executor.submit(...)`
+- **改造时必须保证**：`operateEmpId` 在**切回异步之前**就已经从 `BaseContext` 取出来
+  （现在代码在 `finally` 里调用 `setOperateEmpId(operateEmpId)`，`operateEmpId` 变量是主线程取的 ✅ 保持这个结构就行）
+
+**提醒时机**：
+- **接口响应时间明显变慢**、或者压测发现"写日志"占了大量耗时的时候
+- 或者第一次需要"业务方法里再启一个并发任务"的时候（那时 `@Async` 这套知识会直接复用）
+
+---
+
+## 10. 操作日志查询接口（`GET /log/page`）：join 取姓名 + 长文本字段
+
+**背景**：接口文档 5.5 定义了日志列表查询，但后端**还没实现**。
+`operate_log` 表只有 `operate_emp_id`，而响应要求带 `operateEmpName`（操作人姓名），
+所以查询必须 join `emp`。另外 `method_params` / `return_value` 都是 `varchar(2000)`，
+返回给前端时要注意长度和可读性。
+
+**要掌握的知识点**：
+
+| # | 知识点 | 具体内容 |
+|---|---|---|
+| 1 | 文档要求的响应结构 | `{ total, rows: [{ id, operateEmpId, operateTime, className, methodName, methodParams, returnValue, costTime, operateEmpName }] }` |
+| 2 | **join 取姓名** | `operate_log l left join emp e on l.operate_emp_id = e.id` → `e.name as operateEmpName`。用 `left join` 而不是 `inner join`，因为如果操作人被删了，日志仍然要能显示（`operateEmpName` 为 null 而不是整条记录消失） |
+| 3 | `count` 要不要 join | **不要**。`count` 只查 `operate_log` 单表就够了；画蛇添足地 join 会让总数在"一人多行"时算错（本场景不会，但养成习惯） |
+| 4 | 分页参数 | `?page=1&pageSize=10`，与其它模块保持一致：`limit #{start}, #{pageSize}`，`start = (page-1)*pageSize` |
+| 5 | 排序 | `order by l.operate_time desc, l.id desc` —— **加 `id` 兜底**，因为同一毫秒内可能有多条，只按时间排序结果不稳定 |
+| 6 | 长文本怎么处理 | `method_params` 可能几百字符。① 前端用省略号 + 悬浮展示；② 后端出列表时可以 `left(method_params, 200)` 截断，详情接口再给全文 |
+| 7 | `cost_time` 的类型 | 表里是 `bigint unsigned`，Java 用 `Long`（别用 `Integer`，虽然毫秒数装得下，但 `unsigned` 映射到 `Integer` 会溢出的风险） |
+| 8 | 时间格式 | `operateTime` 是 `LocalDateTime`，默认序列化成 `2026-11-02T21:30:00`。若前端要 `2026-11-02 21:30:00`，用 `@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")` 或全局配置 |
+
+**在本项目里的落点**：
+- `OperateLog` 实体已经预留了 `operateEmpName` 字段 ✅，写查询时直接映射
+- 需要新增：`OperateLogMapper.count()` / `list()`（XML 里写）、`ReportService`/新的 `LogService`、`LogController` 的 `GET /log/page`
+
+**提醒时机**：
+- **前端要做「操作日志」页面时**（M5 前端阶段）
+- 或者要在答辩/展示时体现"有审计能力"的时候
+
+---
+
+## 11. Spring AOP：切点表达式 与「只代理 Spring Bean」
+
+**背景**：这次做 `LogAspect` 用了 `@Around("@annotation(com.wanna.webmanagement.anno.Log)")`。
+能跑通，但 AOP 有几条"不生效"的规则必须提前知道，
+否则将来写事务、缓存、权限时会出现"注解明明加了却没反应"的诡异现象。
+
+**要掌握的知识点**：
+
+| # | 知识点 | 具体内容 |
+|---|---|---|
+| 1 | 五种通知类型 | `@Before`（前置）、`@AfterReturning`（正常返回后）、`@AfterThrowing`（抛异常后）、`@After`（finally 语义）、`@Around`（最强，能改参数/返回值/吞异常）。**要记返回值、耗时、异常三样，只有 `@Around` 够用** |
+| 2 | 切点表达式的四种常见写法 | `execution(* com.wanna..*Service.*(..))`（按包+方法签名）；`@annotation(注解全限定名)`（按注解）；`within(类名)`（按类）；`bean(beanName)`（按 Bean 名）。本项目用 `@annotation` 最贴合业务 |
+| 3 | `execution` 的六个部分 | `execution(修饰符? 返回类型 包.类.方法名(参数) throws?)`。`*` 匹配任意，`..` 匹配任意层包/任意参数。**写错一个字符切点就可能匹配不到，且不报错** |
+| 4 | **AOP 只代理 Spring 容器里的 Bean** ⭐ | `new` 出来的对象不会被代理 → 切面不生效。**这是最重要的一条**：`@Service` / `@Component` 上的注解能生效，自己 `new` 的不能 |
+| 5 | **自调用导致切面失效** ⭐ | 同一个类里 `this.methodB()` 调用带注解的 `methodB` → **不经过代理 → 切面/事务都不生效**。这正是 `@Transactional` 最经典的坑（`@Async` 同理） |
+| 6 | 怎么解决自调用 | ① 把方法拆到另一个 Bean；② 注入自己（`@Autowired private XxxService self;`）然后 `self.methodB()`；③ `AopContext.currentProxy()`（需开 `@EnableAspectJAutoProxy(exposeProxy = true)`） |
+| 7 | JDK 动态代理 vs CGLIB | JDK 基于**接口**（注入时必须用接口类型）；CGLIB 基于**继承**（生成子类，所以 `final` 类/`final` 方法无法代理）。Spring Boot 2.x 起**默认用 CGLIB** |
+| 8 | `joinPoint.proceed()` 的含义 | 调用"下一个通知或目标方法"。`@Around` 里**必须调用它**，否则业务方法根本不会执行（这也是写日志/权限切面时"接口返回 null、什么都没做"的常见原因） |
+| 9 | `ProceedingJoinPoint` 能拿到什么 | `getTarget()`（目标对象）、`getSignature()`（方法签名：类名、方法名）、`getArgs()`（参数数组）、`getThis()`（代理对象）。**`getTarget().getClass().getName()` 和 `getSignature().getDeclaringTypeName()` 的区别**：前者是实际类，后者是声明类（对子类/继承场景不同） |
+| 10 | 切面的多个顺序 | 多个切面作用于同一方法时，用 `@Order(数字)` 控制顺序，数字越小越外层。**顺序错了可能导致"事务提交了但日志还没写"之类的时序问题** |
+
+**在本项目里的落点**：
+- `aop/LogAspect` —— 现在能正常工作，但要验证一个点：**`@Log` 加在 Controller 上，而 Controller 是 Spring Bean**（`@RestController`），所以生效 ✅
+- **将来若在 Service 层也加日志切面**，注意 Service 之间的自调用会失效
+
+**提醒时机**：
+- **任何一次"注解加了但不生效"的排查**（事务不生效、日志不记录、缓存没命中）
+- 或者**第一次要写"业务方法内部再调本类另一个方法"的时候**（提前避开自调用坑）
+
+---
+
+## 12. Lombok `@ToString` 家族 与 敏感字段防泄露
+
+**背景**：做 AOP 操作日志时，`LogAspect` 记录 `Arrays.toString(joinPoint.getArgs())` ——
+如果参数是 `Emp` 对象，`@Data` 自动生成的 `toString()` 会把 `password` 一起写进数据库的
+`operate_log.method_params` 列。**操作日志表里存明文密码**，这是真实的安全事故。
+
+修复方式：在 `password` 字段上加 `@ToString.Exclude`。
+这个注解属于 Lombok 的 `@ToString` 家族，值得系统搞清楚。
+
+**要掌握的知识点**：
+
+| # | 知识点 | 具体内容 |
+|---|---|---|
+| 1 | **`@Data` 包含了什么** ⭐ | `@Data` = `@Getter` + `@Setter` + `@RequiredArgsConstructor` + **`@ToString`** + **`@EqualsAndHashCode`**。所以加 `@Data` 就自动有了 `toString()`，**它会把所有非 static 字段都打出来** |
+| 2 | `@ToString.Exclude` | 让某个字段**不出现在 `toString()` 里**。最常用，一字段一行 |
+| 3 | `@ToString.Of` / `@ToString.OnlyExplicitlyIncluded` | 白名单模式：类上加 `@ToString(onlyExplicitlyIncluded = true)`，字段上只有标了 `@ToString.Include` 的才输出。**字段多、敏感字段也多时更安全**（默认不输出，而非默认输出） |
+| 4 | **`@EqualsAndHashCode` 同理** ⭐ | `@Data` 生成的 `equals`/`hashCode` 也包含所有字段。如果 `password` 参与 `equals`，会出现"密码不同就是不同对象"的奇怪行为（比如放进 `Set` 时）。敏感字段同样要 `@EqualsAndHashCode.Exclude` |
+| 5 | `@ToString(callSuper = true)` | 继承场景下默认**不打印父类字段**，需要显式开启。写了 `extends` 的实体要检查 |
+| 6 | `@ToString(exclude = {"password"})` | 类级别的写法，效果同字段级 `@ToString.Exclude`。**字段分散时用类级集中管理更清晰** |
+| 7 | **三个出口要一起堵** ⭐ | 敏感字段（密码、密钥、身份证）有三个泄露出口：① **JSON 序列化**（`@JsonProperty(access = WRITE_ONLY)`）；② **`toString()`**（`@ToString.Exclude`）；③ **`equals/hashCode`**（`@EqualsAndHashCode.Exclude`）。**只堵一个等于没堵** |
+| 8 | 自定义 `toString()` | Lombok 检测到你自己写了 `toString()` 时**不会生成**，会直接用它。可以在里面做脱敏（比如 `password=***`） |
+| 9 | 其他易踩的 Lombok 默认行为 | `@Data` 生成的 `equals` **不含父类字段**（除非 `callSuper=true`）；`@Builder` 与 `@NoArgsConstructor` 的冲突需要 `@AllArgsConstructor` 配合；`@SneakyThrows` 会吞掉受检异常声明 |
+
+**在本项目里的落点**：
+- `pojo/Emp.password` 已经加了 `@JsonProperty(access = WRITE_ONLY)` + `@ToString.Exclude` ✅
+- **待检查**：`Emp` 的 `@EqualsAndHashCode` 是否也该排除 `password`（目前 `@Data` 默认包含它）
+- 以后加 `User`（学员登录）、或任何含 `token`、`phone`、`idCard` 的实体时，按知识点 7 一次性把三个出口都堵上
+  （`Student` 里已经有 `phone` 和 `idCard`，虽然目前不算敏感到要脱敏，但知道这个思路）
+
+**提醒时机**：
+- **任何一次"日志/响应/报错信息里出现了密码、手机号、身份证"的时候**
+- 定义新实体、尤其是带敏感字段的实体时（提前堵，别等漏了再补）
+- 排查"两个对象明明字段一样却不 `equals`"的诡异问题时（回到知识点 4）

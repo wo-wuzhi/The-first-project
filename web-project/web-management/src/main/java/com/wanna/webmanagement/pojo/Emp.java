@@ -2,6 +2,7 @@ package com.wanna.webmanagement.pojo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+import lombok.ToString;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,8 +14,11 @@ import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
 public class Emp {
     private Integer id;
     private String username;
-    @JsonProperty(access = WRITE_ONLY)
+
+    @JsonProperty(access = WRITE_ONLY)    //响应体不输出密码
+    @ToString.Exclude    //toString不带密码
     private String password;
+
     private String name;
     private Integer gender;
     private String phone;

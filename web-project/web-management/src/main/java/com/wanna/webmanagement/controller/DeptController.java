@@ -1,5 +1,6 @@
 package com.wanna.webmanagement.controller;
 
+import com.wanna.webmanagement.anno.Log;
 import com.wanna.webmanagement.pojo.Dept;
 import com.wanna.webmanagement.pojo.Result;
 import com.wanna.webmanagement.service.DeptService;
@@ -25,6 +26,7 @@ public class DeptController {
         return Result.success(deptList);
     }
 
+    @Log
     @DeleteMapping("/depts")
     public Result delete(@RequestParam("id") Integer deptId){
         log.info("删除部门  {}",deptId);
@@ -32,9 +34,10 @@ public class DeptController {
         return Result.success();
     }
 
+    @Log
     @PostMapping("/depts")
     public Result insert(@RequestBody Dept dept){
-        log.info("添加部门 {}",dept);
+        log.info("添加部门 {}",dept.getName());
         deptService.insert(dept);
         return Result.success();
     }
@@ -46,6 +49,7 @@ public class DeptController {
         return Result.success(dept);
     }
 
+    @Log
     @PutMapping("/depts")
     public Result update(@RequestBody Dept dept){
         log.info("修改 {} id为 {}",dept.getName(),dept.getId());
